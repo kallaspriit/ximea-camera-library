@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="ximea" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="ximea" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="ximea" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+			<Add directory="include" />
+			<Add directory="lib/libyuv/include" />
+			<Add directory="../../../../opt/XIMEA/include" />
+		</Compiler>
+		<Linker>
+			<Add library="fltk" />
+			<Add library="/opt/XIMEA/lib/libXIMEA_GenTL.so" />
+		</Linker>
+		<Unit filename="include/Camera.h" />
+		<Unit filename="include/Canvas.h" />
+		<Unit filename="include/DisplayWindow.h" />
+		<Unit filename="include/FpsCounter.h" />
+		<Unit filename="include/Util.h" />
+		<Unit filename="lib/libyuv/include/libyuv.h" />
+		<Unit filename="lib/libyuv/include/libyuv/basic_types.h" />
+		<Unit filename="lib/libyuv/include/libyuv/compare.h" />
+		<Unit filename="lib/libyuv/include/libyuv/convert.h" />
+		<Unit filename="lib/libyuv/include/libyuv/convert_argb.h" />
+		<Unit filename="lib/libyuv/include/libyuv/convert_from.h" />
+		<Unit filename="lib/libyuv/include/libyuv/convert_from_argb.h" />
+		<Unit filename="lib/libyuv/include/libyuv/cpu_id.h" />
+		<Unit filename="lib/libyuv/include/libyuv/format_conversion.h" />
+		<Unit filename="lib/libyuv/include/libyuv/mjpeg_decoder.h" />
+		<Unit filename="lib/libyuv/include/libyuv/planar_functions.h" />
+		<Unit filename="lib/libyuv/include/libyuv/rotate.h" />
+		<Unit filename="lib/libyuv/include/libyuv/rotate_argb.h" />
+		<Unit filename="lib/libyuv/include/libyuv/row.h" />
+		<Unit filename="lib/libyuv/include/libyuv/scale.h" />
+		<Unit filename="lib/libyuv/include/libyuv/scale_argb.h" />
+		<Unit filename="lib/libyuv/include/libyuv/version.h" />
+		<Unit filename="lib/libyuv/include/libyuv/video_common.h" />
+		<Unit filename="lib/libyuv/source/compare.cc" />
+		<Unit filename="lib/libyuv/source/compare_neon.cc" />
+		<Unit filename="lib/libyuv/source/convert.cc" />
+		<Unit filename="lib/libyuv/source/convert_argb.cc" />
+		<Unit filename="lib/libyuv/source/convert_from.cc" />
+		<Unit filename="lib/libyuv/source/convert_from_argb.cc" />
+		<Unit filename="lib/libyuv/source/cpu_id.cc" />
+		<Unit filename="lib/libyuv/source/format_conversion.cc" />
+		<Unit filename="lib/libyuv/source/mjpeg_decoder.cc" />
+		<Unit filename="lib/libyuv/source/planar_functions.cc" />
+		<Unit filename="lib/libyuv/source/rotate.cc" />
+		<Unit filename="lib/libyuv/source/rotate_argb.cc" />
+		<Unit filename="lib/libyuv/source/rotate_neon.cc" />
+		<Unit filename="lib/libyuv/source/row_common.cc" />
+		<Unit filename="lib/libyuv/source/row_neon.cc" />
+		<Unit filename="lib/libyuv/source/row_posix.cc" />
+		<Unit filename="lib/libyuv/source/row_win.cc" />
+		<Unit filename="lib/libyuv/source/scale.cc" />
+		<Unit filename="lib/libyuv/source/scale_argb.cc" />
+		<Unit filename="lib/libyuv/source/scale_neon.cc" />
+		<Unit filename="lib/libyuv/source/video_common.cc" />
+		<Unit filename="main.cpp" />
+		<Unit filename="src/Camera.cpp" />
+		<Unit filename="src/Canvas.cpp" />
+		<Unit filename="src/DisplayWindow.cpp" />
+		<Unit filename="src/FpsCounter.cpp" />
+		<Unit filename="src/Util.cpp" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
