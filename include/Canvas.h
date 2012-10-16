@@ -7,16 +7,16 @@
 class Canvas : public Fl_Widget
 {
     public:
-        Canvas(int width, int height);
+        Canvas(int width, int height, int delta = 3);
 
         void setImage(unsigned char *image);
-        void setStride(int stride) { this->stride = stride; }
+        void setDelta(int delta) { this->delta = delta; }
         void draw();
 
     private:
         int width;
         int height;
-        int stride;
+        int delta;
         unsigned char* image;
 };
 

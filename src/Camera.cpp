@@ -7,6 +7,12 @@ Camera::Camera() : opened(false), yuvInitialized(false) {
     image.bp = NULL;
     image.bp_size = 0;
     device = NULL;
+
+    frame.data = NULL;
+    frameYUV.data = NULL;
+    frameYUV.dataY = NULL;
+    frameYUV.dataU = NULL;
+    frameYUV.dataV = NULL;
 }
 
 Camera::~Camera() {
@@ -82,7 +88,7 @@ void Camera::startAcquisition() {
 }
 
 const Camera::Frame& Camera::getFrame() {
-    xiGetImage(device, 5000, &image);
+    xiGetImage(device, 100, &image);
 
     frame.data = (unsigned char*)image.bp;
     frame.size = image.bp_size;
@@ -98,7 +104,7 @@ const Camera::Frame& Camera::getFrame() {
 }
 
 const Camera::FrameYUV& Camera::getFrameYUV() {
-    xiGetImage(device, 5000, &image);
+    xiGetImage(device, 100, &image);
 
     frameYUV.data = (unsigned char*)image.bp;
     frameYUV.size = image.bp_size;
@@ -106,21 +112,22 @@ const Camera::FrameYUV& Camera::getFrameYUV() {
     frameYUV.width = image.width;
     frameYUV.height = image.height;
     frameYUV.timestamp = (double)image.tsSec + (double)image.tsUSec / 1000000.0d;
-    frameYUV.fresh = frame.number != lastFrameNumber;
+    frameYUV.fresh = frameYUV.number != lastFrameNumber;
 
     if (!yuvInitialized) {
         frameYUV.strideY = frameYUV.width;
         frameYUV.strideU = (frameYUV.width + 1) / 2;
         frameYUV.strideV = (frameYUV.width + 1) / 2;
 
-        frameYUV.dataY = new uint8[frameYUV.strideY * frameYUV.height];
-        frameYUV.dataU = new uint8[frameYUV.strideU * (frameYUV.height + 1) / 2];
-        frameYUV.dataV = new uint8[frameYUV.strideV * (frameYUV.height + 1) / 2];
+        frameYUV.dataY = new uint8[frameYUV.width * frameYUV.height];
+        frameYUV.dataU = new uint8[(frameYUV.width / 2) * (frameYUV.height / 2)];
+        frameYUV.dataV = new uint8[(frameYUV.width / 2) * (frameYUV.height / 2)];
+        frameYUV.dataYUV = new uint8[frameYUV.width * frameYUV.height * 3];
 
         yuvInitialized = true;
     }
 
-    lastFrameNumber = frame.number;
+    lastFrameNumber = frameYUV.number;
 
     libyuv::BayerRGGBToI420(
         frameYUV.data,
@@ -134,6 +141,20 @@ const Camera::FrameYUV& Camera::getFrameYUV() {
         frameYUV.width,
         frameYUV.height
     );
+
+    int row;
+    int col;
+    int indexUV;
+
+    for (int i = 0; i < frameYUV.width * frameYUV.height; i++) {
+        row = i / frameYUV.width;
+        col = i - row * frameYUV.width;
+        indexUV = (row / 2) * (frameYUV.width / 2) + (col / 2);
+
+        frameYUV.dataYUV[i * 3] = frameYUV.dataY[i];
+        frameYUV.dataYUV[i * 3 + 1] = frameYUV.dataU[indexUV];
+        frameYUV.dataYUV[i * 3 + 2] = frameYUV.dataV[indexUV];
+    }
 
     return frameYUV;
 }

@@ -25,6 +25,7 @@ class Camera {
             unsigned char* dataY;
             unsigned char* dataU;
             unsigned char* dataV;
+            unsigned char* dataYUV;
         };
 
         Camera();
