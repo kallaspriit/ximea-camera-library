@@ -141,8 +141,8 @@ class Blobber {
         bool classify(Rgb* restrict out, Pixel* restrict image);
 
         void addColor(
-            int red, int green, int blue,
             std::string name,
+            int red, int green, int blue,
             int yLow, int yHigh,
             int uLow, int uHigh,
             int vLow, int vHigh,

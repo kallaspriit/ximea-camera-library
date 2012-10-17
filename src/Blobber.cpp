@@ -811,14 +811,20 @@ bool Blobber::classify(Rgb* restrict out,Pixel* restrict image) {
 }
 
 void Blobber::addColor(
-    int red, int green, int blue,
     std::string name,
+    int red, int green, int blue,
     int yLow, int yHigh,
     int uLow, int uHigh,
     int vLow, int vHigh,
     double mergeThreshold,
     int expectedBlobs
 ) {
+    unsigned k = (1 << colorCount);
+
+    clearBits(yClass, BLOBBER_COLOR_LEVELS, yLow, yHigh, k);
+    clearBits(uClass, BLOBBER_COLOR_LEVELS, uLow, uHigh, k);
+    clearBits(vClass, BLOBBER_COLOR_LEVELS, vLow, vHigh, k);
+
     colors[colorCount].color.red = red;
     colors[colorCount].color.green = green;
     colors[colorCount].color.blue = blue;
@@ -831,8 +837,6 @@ void Blobber::addColor(
     colors[colorCount].uHigh = uHigh;
     colors[colorCount].vLow = vLow;
     colors[colorCount].vHigh = vHigh;
-
-    unsigned k = (1 << colorCount);
 
     setBits(yClass, BLOBBER_COLOR_LEVELS, yLow, yHigh, k);
     setBits(uClass, BLOBBER_COLOR_LEVELS, uLow, uHigh, k);

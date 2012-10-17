@@ -9,7 +9,11 @@
 
 class Camera {
     public:
-        struct Frame {
+        struct YUYV {
+            int y1, u, y2, v;
+        };
+
+        struct FrameRaw {
             unsigned char* data;
             int size;
             int width;
@@ -18,14 +22,27 @@ class Camera {
             bool fresh;
             double timestamp;
         };
-        struct FrameYUV : public Frame {
+
+        struct FrameYUYV : public FrameRaw {
             int strideY;
             int strideU;
             int strideV;
             unsigned char* dataY;
             unsigned char* dataU;
             unsigned char* dataV;
-            unsigned char* dataYUV;
+            unsigned char* dataYUYV;
+
+            YUYV getPixelAt(int x, int y) const {
+                int pos = y * strideY + x;
+                YUYV pixel;
+
+                pixel.y1 = dataYUYV[pos];
+                pixel.u = dataYUYV[pos + 1];
+                pixel.y2 = dataYUYV[pos + 2];
+                pixel.v = dataYUYV[pos + 3];
+
+                return pixel;
+            }
         };
 
         Camera();
@@ -34,9 +51,9 @@ class Camera {
         bool open(int serial = 0);
         void startAcquisition();
         void stopAcquisition();
-        const Frame& getFrame();
-        const FrameYUV& getFrameYUV();
-        const FrameYUV& getFrameYUYV();
+        const FrameRaw* getFrame();
+        //const FrameYUV& getFrameYUV();
+        const FrameYUYV* getFrameYUYV();
         void close();
 
         std::string getName() { return getStringParam(XI_PRM_DEVICE_NAME); }
@@ -67,8 +84,8 @@ class Camera {
 
     private:
         XI_IMG image;
-        Frame frame;
-        FrameYUV frameYUV;
+        FrameRaw frameRaw;
+        FrameYUYV frameYUV;
         HANDLE device;
         bool opened;
         bool yuvInitialized;

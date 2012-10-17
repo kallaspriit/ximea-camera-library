@@ -9,7 +9,7 @@ Camera::Camera() : opened(false), yuvInitialized(false) {
     image.bp_size = 0;
     device = NULL;
 
-    frame.data = NULL;
+    frameRaw.data = NULL;
     frameYUV.data = NULL;
     frameYUV.dataY = NULL;
     frameYUV.dataU = NULL;
@@ -88,22 +88,27 @@ void Camera::startAcquisition() {
     xiStartAcquisition(device);
 }
 
-const Camera::Frame& Camera::getFrame() {
+const Camera::FrameRaw* Camera::getFrame() {
     xiGetImage(device, 100, &image);
 
-    frame.data = (unsigned char*)image.bp;
-    frame.size = image.bp_size;
-    frame.number = image.nframe;
-    frame.width = image.width;
-    frame.height = image.height;
-    frame.timestamp = (double)image.tsSec + (double)image.tsUSec / 1000000.0d;
-    frame.fresh = frame.number != lastFrameNumber;
+    if (image.bp == NULL) {
+        return NULL;
+    }
 
-    lastFrameNumber = frame.number;
+    frameRaw.data = (unsigned char*)image.bp;
+    frameRaw.size = image.bp_size;
+    frameRaw.number = image.nframe;
+    frameRaw.width = image.width;
+    frameRaw.height = image.height;
+    frameRaw.timestamp = (double)image.tsSec + (double)image.tsUSec / 1000000.0d;
+    frameRaw.fresh = frameRaw.number != lastFrameNumber;
 
-    return frame;
+    lastFrameNumber = frameRaw.number;
+
+    return &frameRaw;
 }
 
+/*
 const Camera::FrameYUV& Camera::getFrameYUV() {
     xiGetImage(device, 100, &image);
 
@@ -159,11 +164,16 @@ const Camera::FrameYUV& Camera::getFrameYUV() {
 
     return frameYUV;
 }
+*/
 
-const Camera::FrameYUV& Camera::getFrameYUYV() {
+const Camera::FrameYUYV* Camera::getFrameYUYV() {
     //double s = Util::millitime();
 
     xiGetImage(device, 100, &image);
+
+    if (image.bp == NULL) {
+        return NULL;
+    }
 
     //std::cout << "Get: " << (Util::millitime() - s) << std::endl;
 
@@ -183,7 +193,7 @@ const Camera::FrameYUV& Camera::getFrameYUYV() {
         frameYUV.dataY = new uint8[frameYUV.width * frameYUV.height];
         frameYUV.dataU = new uint8[(frameYUV.width / 2) * (frameYUV.height / 2)];
         frameYUV.dataV = new uint8[(frameYUV.width / 2) * (frameYUV.height / 2)];
-        frameYUV.dataYUV = new uint8[frameYUV.width * frameYUV.height * 3];
+        frameYUV.dataYUYV = new uint8[frameYUV.width * frameYUV.height * 3];
 
         yuvInitialized = true;
     }
@@ -207,106 +217,6 @@ const Camera::FrameYUV& Camera::getFrameYUYV() {
 
     //std::cout << "RGGB > I420: " << (Util::millitime() - s) << std::endl;
 
-    /*int row;
-    int col;
-    int indexUV;*/
-
-    // YUYVYUYVYUYVYUYV
-    // YUY
-    //    VYU
-    //       YVY
-    //          UYV
-    //             YUY
-
-    /*int step = 0;
-
-    for (int i = 0; i < frameYUV.width * frameYUV.height; i++) {
-        row = i / frameYUV.width;
-        col = i - row * frameYUV.width;
-        indexUV = (row / 2) * (frameYUV.width / 2) + (col / 2);
-
-        if (step == 0) {
-            frameYUV.dataYUV[i * 3] = frameYUV.dataY[i];
-            frameYUV.dataYUV[i * 3 + 1] = frameYUV.dataU[indexUV];
-            frameYUV.dataYUV[i * 3 + 2] = frameYUV.dataY[i];
-        } else if (step == 1) {
-            frameYUV.dataYUV[i * 3] = frameYUV.dataV[indexUV];
-            frameYUV.dataYUV[i * 3 + 1] = frameYUV.dataY[i];
-            frameYUV.dataYUV[i * 3 + 2] = frameYUV.dataU[indexUV];
-        } else if (step == 2) {
-            frameYUV.dataYUV[i * 3] = frameYUV.dataY[i];
-            frameYUV.dataYUV[i * 3 + 1] = frameYUV.dataV[indexUV];
-            frameYUV.dataYUV[i * 3 + 2] = frameYUV.dataY[i];
-        } else if (step == 3) {
-            frameYUV.dataYUV[i * 3] = frameYUV.dataU[indexUV];
-            frameYUV.dataYUV[i * 3 + 1] = frameYUV.dataY[i];
-            frameYUV.dataYUV[i * 3 + 2] = frameYUV.dataV[indexUV];
-        }
-
-        step = (step + 1) % 4;
-    }*/
-
-    /*
-    int w2 = frameYUV.width / 2;
-    int step = 0;
-
-    for (col = 0; col < w2; col++) {
-        for (row = 0; row < frameYUV.height; row++) {
-            int i = (row * w2 + col) * 4;
-            indexUV = (row / 2) * (frameYUV.width / 2) + (col / 2);
-
-            if (step == 0) {
-                frameYUV.dataYUV[i * 3] = frameYUV.dataY[i];
-                frameYUV.dataYUV[i * 3 + 1] = frameYUV.dataU[indexUV];
-                frameYUV.dataYUV[i * 3 + 2] = frameYUV.dataY[i];
-            } else if (step == 1) {
-                frameYUV.dataYUV[i * 3] = frameYUV.dataV[indexUV];
-                frameYUV.dataYUV[i * 3 + 1] = frameYUV.dataY[i];
-                frameYUV.dataYUV[i * 3 + 2] = frameYUV.dataU[indexUV];
-            } else if (step == 2) {
-                frameYUV.dataYUV[i * 3] = frameYUV.dataY[i];
-                frameYUV.dataYUV[i * 3 + 1] = frameYUV.dataV[indexUV];
-                frameYUV.dataYUV[i * 3 + 2] = frameYUV.dataY[i];
-            } else if (step == 3) {
-                frameYUV.dataYUV[i * 3] = frameYUV.dataU[indexUV];
-                frameYUV.dataYUV[i * 3 + 1] = frameYUV.dataY[i];
-                frameYUV.dataYUV[i * 3 + 2] = frameYUV.dataV[indexUV];
-            }
-
-            step = (step + 1) % 4;
-        }
-    }
-    */
-
-    /*
-    int halfWidth = frameYUV.width / 2;
-
-    for (int col = 0; col < halfWidth; col++) {
-        for (int row = 0; row < frameYUV.height; row++) {
-            int i = (row * halfWidth + col) * 4;
-
-            frameYUV.dataYUV[i * 4 + 0] = frameYUV.dataY[i];
-            frameYUV.dataYUV[i * 4 + 1] = frameYUV.dataU[i];
-            frameYUV.dataYUV[i * 4 + 2] = frameYUV.dataY[i + 1];
-            frameYUV.dataYUV[i * 4 + 3] = frameYUV.dataV[i];
-        }
-    }
-    */
-
-    // YYYY  UV
-    // YYYY  UV
-
-    // YUYV YUYV YUYV
-    // YUYV YUYV YUYV
-
-    // YY  U  V
-    // YY
-
-    // start + 0:	Y'00	Cb00	Y'01	Cr00	Y'02	Cb01	Y'03	Cr01
-    // start + 8:	Y'10	Cb10	Y'11	Cr10	Y'12	Cb11	Y'13	Cr11
-    // start + 16:	Y'20	Cb20	Y'21	Cr20	Y'22	Cb21	Y'23	Cr21
-    // start + 24:	Y'30	Cb30	Y'31	Cr30	Y'32	Cb31	Y'33	Cr31
-
     //s = Util::millitime();
 
     int row;
@@ -321,85 +231,15 @@ const Camera::FrameYUV& Camera::getFrameYUYV() {
         col = i - row * frameYUV.width;
         indexUV = (row >> 1) * halfWidth + (col >> 1);
 
-        frameYUV.dataYUV[i << 1] = frameYUV.dataY[i];
-        frameYUV.dataYUV[(i << 1) + 1] = alt ? frameYUV.dataV[indexUV] : frameYUV.dataU[indexUV];
+        frameYUV.dataYUYV[i << 1] = frameYUV.dataY[i];
+        frameYUV.dataYUYV[(i << 1) + 1] = alt ? frameYUV.dataV[indexUV] : frameYUV.dataU[indexUV];
 
         alt = !alt;
     }
 
     //std::cout << "I420 > YUYV: " << (Util::millitime() - s) << std::endl;
 
-    /*int row;
-    int col;
-    int indexUV;
-    int indexYUYV;
-    int halfWidth = frameYUV.width / 2;
-    int halfHeight = frameYUV.height / 2;
-
-    for (row = 0; row < halfHeight; row++) {
-        for (col = 0; col < halfWidth; col++) {
-            indexUV = row * halfWidth + col;
-            indexYUYV = row * 2 * halfWidth + col * 2;
-
-            frameYUV.dataYUV[indexYUYV] = frameYUV.dataY[indexYUYV];
-            frameYUV.dataYUV[indexYUYV + 1] = frameYUV.dataU[indexUV];
-            frameYUV.dataYUV[indexYUYV + 2] = frameYUV.dataY[indexYUYV + frameYUV.width];
-            frameYUV.dataYUV[indexYUYV + 3] = frameYUV.dataV[indexUV];
-        }
-    }*/
-
-    // 640x512 = 327680
-    // 640x512 * 3 = 983040
-    // 320*256 = 81920
-    // 640x512 + 320*256 * 2 = 491520
-
-    // YUV Y V YUV Y V  > YU YV YU YV
-    // Y   Y V Y V Y V  > YU YV YU
-    // YUV Y V YUV YUV  >
-    // Y   Y V YUV YUV  >
-
-    // start + 0:	Cb00	Y'00	Cr00	Y'01	Cb01	Y'02	Cr01	Y'03
-    // start + 8:	Cb10	Y'10	Cr10	Y'11	Cb11	Y'12	Cr11	Y'13
-    // start + 16:	Cb20	Y'20	Cr20	Y'21	Cb21	Y'22	Cr21	Y'23
-    // start + 24:	Cb30	Y'30	Cr30	Y'31	Cb31	Y'32	Cr31	Y'33
-
-
-    // frameYUV.width * frameYUV.height * 3 / 2
-    /*int items = frameYUV.width * frameYUV.height + (frameYUV.width / 2) * (frameYUV.height / 2) * 2;
-    int step = 0;
-
-    for (int i = 0; i < items; i++) {
-        row = i / frameYUV.width;
-        col = i - row * frameYUV.width;
-        indexUV = (row / 2) * (frameYUV.width / 2) + (col / 2);
-
-        if (step == 0) {
-            frameYUV.dataYUV[i] = 0;
-        }
-
-        step = (step + 1) % 4;
-    }*/
-
-    /*int row;
-    int col;
-    int indexUV;
-    int indexYUYV;
-    int halfWidth = frameYUV.width / 2;
-
-    for (row = 0; row < frameYUV.height; row++) {
-        for (col = 0; col < halfWidth; col++) {
-            indexUV = (row / 2) * halfWidth + col;
-            //indexYUYV = row * frameYUV.width + col * 2;
-            int i = (row * halfWIdth + col) * 4;
-
-            frameYUV.dataYUV[i + 0] = frameYUV.dataY[indexYUYV];
-            frameYUV.dataYUV[i + 1] = frameYUV.dataU[indexUV];
-            frameYUV.dataYUV[i + 2] = frameYUV.dataY[indexYUYV + 1];
-            frameYUV.dataYUV[i + 3] = frameYUV.dataV[indexUV];
-        }
-    }*/
-
-    return frameYUV;
+    return &frameYUV;
 }
 
 void Camera::stopAcquisition() {

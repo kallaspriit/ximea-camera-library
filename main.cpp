@@ -8,7 +8,7 @@
 #include <iostream>
 #include <cmath>
 
-#define USE_RGB
+//#define USE_RGB
 
 int main() {
     int downsampling = 2;
@@ -52,32 +52,47 @@ int main() {
     while (DisplayWindow::windowsVisible()) {
         //const Camera::Frame& frame = camera.getFrame();
         //const Camera::FrameYUV& frame = camera.getFrameYUV();
-        const Camera::FrameYUV& frame = camera.getFrameYUYV();
+        const Camera::FrameYUYV* frame = camera.getFrameYUYV();
 
-        if (!frame.fresh) {
-            std::cout << "Repeating frame #" << frame.number << std::endl;
+        if (!frame->fresh) {
+            std::cout << "Repeating frame #" << frame->number << std::endl;
 
             continue;
         }
 
-        windowY.setImage(frame.dataY);
-        windowU.setImage(frame.dataU);
-        windowV.setImage(frame.dataV);
-        windowYUV.setImage(frame.dataYUV);
+        windowY.setImage(frame->dataY);
+        windowU.setImage(frame->dataU);
+        windowV.setImage(frame->dataV);
+        windowYUV.setImage(frame->dataYUYV);
 
-        vision.onFrameReceived(frame.dataYUV);
+        vision.onFrameReceived(frame->dataYUYV);
 
         unsigned char* classification = vision.classify();
 
         windowClassification.setImage(classification);
 
+        /*
+        Camera::YUYV centerColor = frame->getPixelAt(width / 2, height / 2);
+
+        int y = (centerColor.y1 + centerColor.y2) / 2;
+        int u = centerColor.u;
+        int v = centerColor.v;
+
+        if (y < 0) y += 256;
+        if (u < 0) u += 256;
+        if (v < 0) v += 256;
+
+        printf("Center: %d, %d, %d, %d", y, u, v);
+        std::cout << "Center2: " << (int)centerColor.y1 << ", " << (int)centerColor.u << ", " << (int)centerColor.y2 << ", " << (int)centerColor.v << std::endl;
+        */
+
         #ifdef USE_RGB
-        //Util::yuvToRgb(width, height, frame.dataYUV, rgb);
-        Util::yuyvToRgb(width, height, frame.dataYUV, rgb);
+        //Util::yuvToRgb(width, height, frame->dataYUYV, rgb);
+        Util::yuyvToRgb(width, height, frame->dataYUYV, rgb);
         windowRGB.setImage(rgb);
 
         /*
-        sprintf(filename, "frame-%d.jpg", frame.number);
+        sprintf(filename, "frame-%d.jpg", frame->number);
 
         //jpge::compress_image_to_jpeg_file(filename, width, height, 3, rgb);
 
