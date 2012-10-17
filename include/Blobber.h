@@ -40,6 +40,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <stdio.h>
 
 // color options
@@ -88,14 +89,14 @@ class Blobber {
             unsigned char red, green, blue;
         };
 
-        struct Region {
+        struct Blob {
             int color;               // id of the color
             int area;                // occupied area in pixels
             int x1, y1, x2, y2;      // bounding box (x1,y1) - (x2,y2)
             float centerX, centerY;  // centroid
             FormatYUV average;       // average color (if BLOBBER_COLOR_AVERAGES enabled)
             int sumX, sumY, sumZ;    // temporaries for centroid and avg color
-            Region* next;            // next region in list
+            Blob* next;              // next blob in list
         };
 
         struct ColorRun {
@@ -104,11 +105,11 @@ class Blobber {
             int parent;      // run's parent in the connected components tree
         };
 
-        struct ColorInfo {
+        struct Color {
             Rgb color;              // example color (such as used in test output)
             char* name;             // color's meaninful name (e.g. ball, goal)
             double mergeThreshold;  // merge density threshold
-            int expectedRegions;    // expected number of regions (used for merge)
+            int expectedBlobs;      // expected number of blobs (used for merge)
             int yLow, yHigh;        // Y,U,V component thresholds
             int uLow, uHigh;
             int vLow, vHigh;
@@ -123,8 +124,8 @@ class Blobber {
         ~Blobber();
 
         bool initialize(int width, int height);
-        bool loadOptions(char* filename);
-        bool saveOptions(char* filename);
+        bool loadOptions(std::string filename);
+        bool saveOptions(std::string filename);
         bool enable(unsigned opt);
         bool disable(unsigned opt);
         void close();
@@ -137,16 +138,16 @@ class Blobber {
             return mapFilter;
         }
 
-        bool getClassification(Rgb* restrict out, Pixel* restrict image);
+        bool classify(Rgb* restrict out, Pixel* restrict image);
 
         void addColor(
             int red, int green, int blue,
-            char* name,
+            std::string name,
             int yLow, int yHigh,
             int uLow, int uHigh,
             int vLow, int vHigh,
             double mergeThreshold = 0.5d,
-            int expectedRegions = 5
+            int expectedBlobs = 5
         );
 
         bool getThreshold(
@@ -167,23 +168,31 @@ class Blobber {
             return map;
         }
 
-        char* getColorName(int color) const {
-            return colors[color].name;
-        }
-
-        Rgb getColorVisual(int color) const {
-            return colors[color].color;
-        }
-
-        ColorInfo* getColorById(int color) {
+        Color* getColor(int color) {
             return &colors[color];
         }
 
-        void getColorById(int color, ColorInfo& info) const {
-            info = colors[color];
+        int getColorId(std::string name) {
+            for (int i = 0; i < colorCount; i++) {
+                if (strcmp(colors[i].name, name.c_str()) == 0) {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
-        void setColorInfo(int color, ColorInfo& info) {
+        Color* getColor(std::string name) {
+            for (int i = 0; i < colorCount; i++) {
+                if (strcmp(colors[i].name, name.c_str()) == 0) {
+                    return &colors[i];
+                }
+            }
+
+            return NULL;
+        }
+
+        void setColor(int color, Color& info) {
             colors[color] = info;
         }
 
@@ -194,21 +203,29 @@ class Blobber {
         bool processFrame(Pixel* image);
         bool processFrame(unsigned* map);
 
-        int getRegionCount(int colorId);
-        Region* getRegions(int colorId);
+        int getBlobCount(int colorId);
+        Blob* getBlobs(int colorId);
+
+        int getBlobCount(std::string colorName) {
+            return getBlobCount(getColorId(colorName));
+        }
+
+        Blob* getBlobs(std::string colorName) {
+            return getBlobs(getColorId(colorName));
+        }
 
     private:
         unsigned yClass[BLOBBER_COLOR_LEVELS];
         unsigned uClass[BLOBBER_COLOR_LEVELS];
         unsigned vClass[BLOBBER_COLOR_LEVELS];
 
-        Region regionTable[BLOBBER_MAX_REGIONS];
-        Region* regionList[BLOBBER_MAX_COLORS];
-        int regionCount[BLOBBER_MAX_COLORS];
+        Blob blobTable[BLOBBER_MAX_REGIONS];
+        Blob* blobList[BLOBBER_MAX_COLORS];
+        int blobCount[BLOBBER_MAX_COLORS];
 
         ColorRun runMap[BLOBBER_MAX_RUNS];
 
-        ColorInfo colors[BLOBBER_MAX_COLORS];
+        Color colors[BLOBBER_MAX_COLORS];
         int colorCount;
         int width, height;
         unsigned* map;
@@ -220,23 +237,23 @@ class Blobber {
         void classifyFrame(Pixel* restrict img, unsigned* restrict map);
         int encodeRuns(ColorRun* restrict out, unsigned* restrict map);
         void connectComponents(ColorRun* restrict map, int num);
-        int extractRegions(Region* restrict reg, ColorRun* restrict runMap, int num);
+        int extractBlobs(Blob* restrict reg, ColorRun* restrict runMap, int num);
 
         void calculateAverageColors(
-            Region* restrict reg,
-            int regionCount,
+            Blob* restrict reg,
+            int blobCount,
             Pixel* restrict img,
             ColorRun* restrict runMap,
             int runCount
         );
 
-        int separateRegions(Region* restrict reg,int num);
-        Region* sortRegionListByArea(Region* restrict list, int passes);
-        void sortRegions(int maxArea);
+        int separateBlobs(Blob* restrict reg,int num);
+        Blob* sortBlobListByArea(Blob* restrict list, int passes);
+        void sortBlobs(int maxArea);
 
         // density based merging support
-        int mergeRegions(Region* p, int num, double densityThreshold);
-        int mergeRegions();
+        int mergeBlobs(Blob* p, int num, double densityThreshold);
+        int mergeBlobs();
 
         void filterAbove(unsigned* map, int* edges);
 

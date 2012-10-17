@@ -11,7 +11,7 @@ class Vision : public Blobber::MapFilter {
         void onFrameReceived(unsigned char* content);
         void filterMap(unsigned int* map);
         unsigned int* getColorMap() { return blobber->getMap(); }
-        unsigned char* getClassification();
+        unsigned char* classify();
 
     private:
         Blobber* blobber;

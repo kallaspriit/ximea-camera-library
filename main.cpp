@@ -44,9 +44,9 @@ int main() {
     #ifdef USE_RGB
     unsigned char rgb[width * height * 3];
 
-    char filename[256];
-    int jpegBufferSize = 1024 * 100;
-    unsigned char jpegBuffer[jpegBufferSize];
+    //char filename[256];
+    //int jpegBufferSize = 1024 * 100;
+    //unsigned char jpegBuffer[jpegBufferSize];
     #endif
 
     while (DisplayWindow::windowsVisible()) {
@@ -67,7 +67,7 @@ int main() {
 
         vision.onFrameReceived(frame.dataYUV);
 
-        unsigned char* classification = vision.getClassification();
+        unsigned char* classification = vision.classify();
 
         windowClassification.setImage(classification);
 
@@ -76,6 +76,7 @@ int main() {
         Util::yuyvToRgb(width, height, frame.dataYUV, rgb);
         windowRGB.setImage(rgb);
 
+        /*
         sprintf(filename, "frame-%d.jpg", frame.number);
 
         //jpge::compress_image_to_jpeg_file(filename, width, height, 3, rgb);
@@ -91,6 +92,7 @@ int main() {
 
         std::cout << "; real jpeg size: " << jpegBufferSize << std::endl;
         std::cout << base64img << std::endl;
+        */
 
         #endif
 

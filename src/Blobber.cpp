@@ -122,7 +122,7 @@ int Blobber::encodeRuns(ColorRun* restrict out,unsigned* restrict map)
 
 void Blobber::connectComponents(ColorRun* restrict map,int num)
 // Connect components using four-connecteness so that the runs each
-// identify the global parent of the connected region they are a part
+// identify the global parent of the connected blob they are a part
 // of.  It does this by scanning adjacent rows and merging where similar
 // colors overlap.  Used to be union by rank w/ path compression, but now
 // is just uses path compression as the global parent index seems to be
@@ -197,11 +197,11 @@ void Blobber::connectComponents(ColorRun* restrict map,int num)
     // Ouch, my brain hurts.
 }
 
-int Blobber::extractRegions(Region* restrict reg,ColorRun* restrict runMap,int num)
-// Takes the list of runs and formats them into a region table,
+int Blobber::extractBlobs(Blob* restrict reg,ColorRun* restrict runMap,int num)
+// Takes the list of runs and formats them into a blob table,
 // gathering the various statistics we want along the way.
 // num is the number of runs in the runMap array, and the number of
-// unique regions in reg[] (< BLOBBER_MAX_REGIONS) is returned.
+// unique blobs in reg[] (< BLOBBER_MAX_REGIONS) is returned.
 // Implemented as a single pass over the array of runs.
 {
     int x,y,i;
@@ -215,8 +215,8 @@ int Blobber::extractRegions(Region* restrict reg,ColorRun* restrict runMap,int n
 
         if(r.color) {
             if(r.parent == i) {
-                // Add new region if this run is a root (i.e. self parented)
-                runMap[i].parent = b = n;  // renumber to point to region id
+                // Add new blob if this run is a root (i.e. self parented)
+                runMap[i].parent = b = n;  // renumber to point to blob id
                 reg[b].color = bottomBit(r.color) - 1;
                 reg[b].area = r.length;
                 reg[b].x1 = x;
@@ -230,9 +230,9 @@ int Blobber::extractRegions(Region* restrict reg,ColorRun* restrict runMap,int n
                 n++;
                 if(n >= BLOBBER_MAX_REGIONS) return(BLOBBER_MAX_REGIONS);
             } else {
-                // Otherwise update region stats incrementally
+                // Otherwise update blob stats incrementally
                 b = runMap[r.parent].parent;
-                runMap[i].parent = b; // update to point to region id
+                runMap[i].parent = b; // update to point to blob id
                 reg[b].area += r.length;
                 reg[b].x2 = max(x + r.length,reg[b].x2);
                 reg[b].x1 = min(x,reg[b].x1);
@@ -264,14 +264,14 @@ int Blobber::extractRegions(Region* restrict reg,ColorRun* restrict runMap,int n
     return(n);
 }
 
-void Blobber::calculateAverageColors(Region* restrict reg,int regionCount,
+void Blobber::calculateAverageColors(Blob* restrict reg,int blobCount,
                                 Pixel* restrict img,
                                 ColorRun* restrict runMap,int runCount)
-// calculates the average color for each region.
+// calculates the average color for each blob.
 // num is the number of runs in the runMap array, and the number of
-// unique regions in reg[] (< BLOBBER_MAX_REGIONS) is returned.
+// unique blobs in reg[] (< BLOBBER_MAX_REGIONS) is returned.
 // Implemented as a single pass over the image, and a second pass over
-// the regions.
+// the blobs.
 {
     int i,j,x,l;
     Pixel p;
@@ -283,7 +283,7 @@ void Blobber::calculateAverageColors(Region* restrict reg,int regionCount,
     int area;
 
     // clear out temporaries
-    for(i=0; i<regionCount; i++) {
+    for(i=0; i<blobCount; i++) {
         reg[i].sumX = 0;
         reg[i].sumY = 0;
         reg[i].sumZ = 0;
@@ -293,7 +293,7 @@ void Blobber::calculateAverageColors(Region* restrict reg,int regionCount,
 
     // printf("FRAME_START\n");
 
-    // sum up color components for each region, by traversing image and runs
+    // sum up color components for each blob, by traversing image and runs
     for(i=0; i<runCount; i++) {
         r = runMap[i];
         l = r.length;
@@ -334,7 +334,7 @@ void Blobber::calculateAverageColors(Region* restrict reg,int regionCount,
                 // area++;
             }
 
-            // add sums to region
+            // add sums to blob
             b = r.parent;
             reg[b].sumX += sumY;
             reg[b].sumY += sum_u;
@@ -356,7 +356,7 @@ void Blobber::calculateAverageColors(Region* restrict reg,int regionCount,
     }
 
     // Divide sums by area to calculate average colors
-    for(i=0; i<regionCount; i++) {
+    for(i=0; i<blobCount; i++) {
         area = reg[i].area;
         avg.y = reg[i].sumX / area;
         avg.u = reg[i].sumY / area;
@@ -382,24 +382,24 @@ void Blobber::calculateAverageColors(Region* restrict reg,int regionCount,
     }
 }
 
-int Blobber::separateRegions(Region* restrict reg,int num)
-// Splits the various regions in the region table a separate list
+int Blobber::separateBlobs(Blob* restrict reg,int num)
+// Splits the various blobs in the blob table a separate list
 // for each color.  The lists are threaded through the table using
-// the region's 'next' field.  Returns the maximal area of the
-// regions, which we use below to speed up sorting.
+// the blob's 'next' field.  Returns the maximal area of the
+// blobs, which we use below to speed up sorting.
 {
-    Region* p;
+    Blob* p;
     int i,l;
     int area,maxArea;
 
-    // clear out the region table
+    // clear out the blob table
     for(i=0; i<BLOBBER_MAX_COLORS; i++) {
-        regionCount[i] = 0;
-        regionList[i] = NULL;
+        blobCount[i] = 0;
+        blobList[i] = NULL;
     }
 
     // step over the table, adding successive
-    // regions to the front of each list
+    // blobs to the front of each list
     maxArea = 0;
     for(i=0; i<num; i++) {
         p = &reg[i];
@@ -407,9 +407,9 @@ int Blobber::separateRegions(Region* restrict reg,int num)
         if(area >= BLOBBER_MIN_AREA) {
             if(area > maxArea) maxArea = area;
             l = p->color;
-            regionCount[l]++;
-            p->next = regionList[l];
-            regionList[l] = p;
+            blobCount[l]++;
+            p->next = blobList[l];
+            blobList[l] = p;
         }
     }
 
@@ -420,16 +420,16 @@ int Blobber::separateRegions(Region* restrict reg,int num)
 // Feel free to change them, though these values seemed to work well
 // in testing.  Don't worry about extra passes to get all 32 bits of
 // the area; the implementation only does as many passes as needed to
-// touch the most significant set bit (MSB of biggest region's area)
+// touch the most significant set bit (MSB of biggest blob's area)
 #define BLOBBER_RBITS 6
 #define BLOBBER_RADIX (1 << BLOBBER_RBITS)
 #define BLOBBER_RMASK (BLOBBER_RADIX-1)
 
-Blobber::Region* Blobber::sortRegionListByArea(Region* restrict list,int passes)
-// Sorts a list of regions by their area field.
+Blobber::Blob* Blobber::sortBlobListByArea(Blob* restrict list,int passes)
+// Sorts a list of blobs by their area field.
 // Uses a linked list based radix sort to process the list.
 {
-    Region* tbl[BLOBBER_RADIX],*p,*pn;
+    Blob* tbl[BLOBBER_RADIX],*p,*pn;
     int slot,shift;
     int i,j;
 
@@ -468,9 +468,9 @@ Blobber::Region* Blobber::sortRegionListByArea(Region* restrict list,int passes)
     return(list);
 }
 
-void Blobber::sortRegions(int maxArea)
-// Sorts entire region table by area, using the above
-// function to sort each threaded region list.
+void Blobber::sortBlobs(int maxArea)
+// Sorts entire blob table by area, using the above
+// function to sort each threaded blob list.
 {
     int i,p;
 
@@ -479,18 +479,18 @@ void Blobber::sortRegions(int maxArea)
 
     // sort each list
     for(i=0; i<BLOBBER_MAX_COLORS; i++) {
-        regionList[i] = sortRegionListByArea(regionList[i],p);
+        blobList[i] = sortBlobListByArea(blobList[i],p);
     }
 }
 
-int Blobber::mergeRegions(Region* p,int num,double densityThreshold)
-// Looks through regions and merges pairs of the same color that would
+int Blobber::mergeBlobs(Blob* p,int num,double densityThreshold)
+// Looks through blobs and merges pairs of the same color that would
 // have a high density after combining them (where density is the area
-// in pixels of the region divided by the bounding box area).  This
+// in pixels of the blob divided by the bounding box area).  This
 // implementation sucks, and I promise real spatial data structures in
 // the future so n^2 ugliness like this is not necessary.
 {
-    Region* q,*s;
+    Blob* q,*s;
     int l,r,t,b;
     int a;
     int merged;
@@ -509,9 +509,9 @@ int Blobber::mergeRegions(Region* p,int num,double densityThreshold)
             b = max(p->y2,q->y2);
             a = (r-l) * (b-t);
 
-            // if density of merged region is still above threshold
+            // if density of merged blob is still above threshold
             if((double)(p->area + q->area) / a > densityThreshold) {
-                // merge them to create a new region
+                // merge them to create a new blob
                 a = p->area + q->area;
                 p->x1 = l;
                 p->x2 = r;
@@ -521,7 +521,7 @@ int Blobber::mergeRegions(Region* p,int num,double densityThreshold)
                 p->centerY = ((p->centerY * p->area) + (q->centerY * q->area)) / a;
                 p->area = a;
 
-                // remove q from list (old smaller region)
+                // remove q from list (old smaller blob)
                 q = q->next;
                 s->next = q;
                 merged++;
@@ -536,8 +536,8 @@ int Blobber::mergeRegions(Region* p,int num,double densityThreshold)
     return(merged);
 }
 
-int Blobber::mergeRegions()
-// Apply merge operation to all regions using the above function.
+int Blobber::mergeBlobs()
+// Apply merge operation to all blobs using the above function.
 {
     int i,m;
     int num;
@@ -545,8 +545,8 @@ int Blobber::mergeRegions()
     num = 0;
 
     for(i=0; i<BLOBBER_MAX_COLORS; i++) {
-        m = mergeRegions(regionList[i],colors[i].expectedRegions,colors[i].mergeThreshold);
-        regionCount[i] -= m;
+        m = mergeBlobs(blobList[i],colors[i].expectedBlobs,colors[i].mergeThreshold);
+        blobCount[i] -= m;
         num += m;
     }
 
@@ -562,8 +562,8 @@ void Blobber::clear() {
     ZERO(uClass);
     ZERO(vClass);
 
-    ZERO(regionList);
-    ZERO(regionCount);
+    ZERO(blobList);
+    ZERO(blobCount);
 
     ZERO(colors);
 
@@ -604,7 +604,7 @@ bool Blobber::initialize(int width, int height) {
 #define BLOBBER_STATE_THRESH 2
 #define BLOBBER_MAX_BUF 256
 
-bool Blobber::loadOptions(char *filename)
+bool Blobber::loadOptions(std::string filename)
 // Loads in options file specifying color names and representative
 // rgb triplets.  Also loads in color class threshold values.
 {
@@ -615,13 +615,13 @@ bool Blobber::loadOptions(char *filename)
     int r,g,b;
     int exp_num;
     double merge;
-    ColorInfo* c;
+    Color* c;
 
     int y1,y2,u1,u2,v1,v2;
     unsigned k;
 
     // Open options file
-    in = fopen(filename,"rt");
+    in = fopen(filename.c_str(),"rt");
     if(!in) return(false);
 
     // Clear out previously set options
@@ -667,7 +667,7 @@ bool Blobber::loadOptions(char *filename)
                     c->color.blue  = b;
                     c->name  = strdup(str);
                     c->mergeThreshold = merge;
-                    c->expectedRegions = exp_num;
+                    c->expectedBlobs = exp_num;
                     i++;
                     colorCount++;
                 } else {
@@ -716,12 +716,12 @@ bool Blobber::loadOptions(char *filename)
     return(true);
 }
 
-bool Blobber::saveOptions(char* filename) {
-    ColorInfo* c;
+bool Blobber::saveOptions(std::string filename) {
+    Color* c;
     FILE* out;
     int i;
 
-    out = fopen(filename,"wt");
+    out = fopen(filename.c_str(),"wt");
     if(!out) return(false);
 
     fprintf(out,"[Colors]\n");
@@ -730,7 +730,7 @@ bool Blobber::saveOptions(char* filename) {
         c = &colors[i];
         fprintf(out,"(%3d,%3d,%3d) %6.4lf %d %s\n",
                 c->color.red,c->color.green,c->color.blue,
-                c->mergeThreshold,c->expectedRegions,c->name);
+                c->mergeThreshold,c->expectedBlobs,c->name);
         i++;
     }
 
@@ -776,7 +776,7 @@ void Blobber::close() {
 
 //==== Vision Testing Functions ====================================//
 
-bool Blobber::getClassification(Rgb* restrict out,Pixel* restrict image) {
+bool Blobber::classify(Rgb* restrict out,Pixel* restrict image) {
     int i,s;
     Rgb black(0,0,0);
 
@@ -812,19 +812,19 @@ bool Blobber::getClassification(Rgb* restrict out,Pixel* restrict image) {
 
 void Blobber::addColor(
     int red, int green, int blue,
-    char* name,
+    std::string name,
     int yLow, int yHigh,
     int uLow, int uHigh,
     int vLow, int vHigh,
     double mergeThreshold,
-    int expectedRegions
+    int expectedBlobs
 ) {
     colors[colorCount].color.red = red;
     colors[colorCount].color.green = green;
     colors[colorCount].color.blue = blue;
-    colors[colorCount].name = strdup(name);
+    colors[colorCount].name = strdup(name.c_str());
     colors[colorCount].mergeThreshold = mergeThreshold;
-    colors[colorCount].expectedRegions = expectedRegions;
+    colors[colorCount].expectedBlobs = expectedBlobs;
     colors[colorCount].yLow = yLow;
     colors[colorCount].yHigh = yHigh;
     colors[colorCount].uLow = uLow;
@@ -845,7 +845,7 @@ bool Blobber::getThreshold(int color,
                            int& yLow,int& yHigh,
                            int& uLow,int& uHigh,
                            int& vLow,int& vHigh) {
-    ColorInfo* c;
+    Color* c;
 
     if(color<0 || color>=BLOBBER_MAX_COLORS) return(false);
 
@@ -866,7 +866,7 @@ bool Blobber::setThreshold(
     int uLow,int uHigh,
     int vLow,int vHigh
 ) {
-    ColorInfo* c;
+    Color* c;
     unsigned k;
 
     if(color<0 || color>=BLOBBER_MAX_COLORS) return(false);
@@ -896,7 +896,7 @@ bool Blobber::setThreshold(
 
 bool Blobber::processFrame(Pixel* image) {
     int runs;
-    int regions;
+    int blobs;
     int maxArea;
 
     if(!image) return(false);
@@ -908,17 +908,17 @@ bool Blobber::processFrame(Pixel* image) {
         runs = encodeRuns(runMap,map);
         connectComponents(runMap,runs);
 
-        regions = extractRegions(regionTable,runMap,runs);
+        blobs = extractBlobs(blobTable,runMap,runs);
 
         if(options & BLOBBER_COLOR_AVERAGES) {
-            calculateAverageColors(regionTable,regions,image,runMap,runs);
+            calculateAverageColors(blobTable,blobs,image,runMap,runs);
         }
 
-        maxArea = separateRegions(regionTable,regions);
-        sortRegions(maxArea);
+        maxArea = separateBlobs(blobTable,blobs);
+        sortBlobs(maxArea);
 
         if(options & BLOBBER_DENSITY_MERGE) {
-            mergeRegions();
+            mergeBlobs();
         }
     }
 
@@ -927,7 +927,7 @@ bool Blobber::processFrame(Pixel* image) {
 
 bool Blobber::processFrame(unsigned* map) {
     int runs;
-    int regions;
+    int blobs;
     int maxArea;
 
     if(!map) return(false);
@@ -935,28 +935,28 @@ bool Blobber::processFrame(unsigned* map) {
     runs = encodeRuns(runMap,map);
     connectComponents(runMap,runs);
 
-    regions = extractRegions(regionTable,runMap,runs);
+    blobs = extractBlobs(blobTable,runMap,runs);
 
     // if(options & BLOBBER_COLOR_AVERAGES){
-    //   calculateAverageColors(regionTable,regions,image,runMap,runs);
+    //   calculateAverageColors(blobTable,blobs,image,runMap,runs);
     // }
 
-    maxArea = separateRegions(regionTable,regions);
-    sortRegions(maxArea);
+    maxArea = separateBlobs(blobTable,blobs);
+    sortBlobs(maxArea);
 
     if(options & BLOBBER_DENSITY_MERGE) {
-        mergeRegions();
+        mergeBlobs();
     }
 
     return(true);
 }
 
-int Blobber::getRegionCount(int colorId) {
+int Blobber::getBlobCount(int colorId) {
     if(colorId<0 || colorId>=BLOBBER_MAX_COLORS) return(BLOBBER_NONE);
-    return(regionCount[colorId]);
+    return(blobCount[colorId]);
 }
 
-Blobber::Region* Blobber::getRegions(int colorId) {
+Blobber::Blob* Blobber::getBlobs(int colorId) {
     if(colorId<0 || colorId>=BLOBBER_MAX_COLORS) return(NULL);
-    return(regionList[colorId]);
+    return(blobList[colorId]);
 }

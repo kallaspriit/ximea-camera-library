@@ -161,11 +161,11 @@ const Camera::FrameYUV& Camera::getFrameYUV() {
 }
 
 const Camera::FrameYUV& Camera::getFrameYUYV() {
-    double s = Util::millitime();
+    //double s = Util::millitime();
 
     xiGetImage(device, 100, &image);
 
-    std::cout << "Get: " << (Util::millitime() - s) << std::endl;
+    //std::cout << "Get: " << (Util::millitime() - s) << std::endl;
 
     frameYUV.data = (unsigned char*)image.bp;
     frameYUV.size = image.bp_size;
@@ -190,7 +190,7 @@ const Camera::FrameYUV& Camera::getFrameYUYV() {
 
     lastFrameNumber = frameYUV.number;
 
-    s = Util::millitime();
+    //s = Util::millitime();
 
     libyuv::BayerRGGBToI420(
         frameYUV.data,
@@ -205,7 +205,7 @@ const Camera::FrameYUV& Camera::getFrameYUYV() {
         frameYUV.height
     );
 
-    std::cout << "RGGB > I420: " << (Util::millitime() - s) << std::endl;
+    //std::cout << "RGGB > I420: " << (Util::millitime() - s) << std::endl;
 
     /*int row;
     int col;
@@ -307,7 +307,7 @@ const Camera::FrameYUV& Camera::getFrameYUYV() {
     // start + 16:	Y'20	Cb20	Y'21	Cr20	Y'22	Cb21	Y'23	Cr21
     // start + 24:	Y'30	Cb30	Y'31	Cr30	Y'32	Cb31	Y'33	Cr31
 
-    s = Util::millitime();
+    //s = Util::millitime();
 
     int row;
     int col;
@@ -327,7 +327,7 @@ const Camera::FrameYUV& Camera::getFrameYUYV() {
         alt = !alt;
     }
 
-    std::cout << "I420 > YUYV: " << (Util::millitime() - s) << std::endl;
+    //std::cout << "I420 > YUYV: " << (Util::millitime() - s) << std::endl;
 
     /*int row;
     int col;
