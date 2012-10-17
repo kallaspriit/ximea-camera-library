@@ -36,6 +36,7 @@ class Camera {
         void stopAcquisition();
         const Frame& getFrame();
         const FrameYUV& getFrameYUV();
+        const FrameYUV& getFrameYUYV();
         void close();
 
         std::string getName() { return getStringParam(XI_PRM_DEVICE_NAME); }
